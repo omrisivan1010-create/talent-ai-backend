@@ -118,8 +118,8 @@ def create_candidate(request: CandidatePostRequest):
         
         extracted_data = completion.choices[0].message.parsed
         
-        # שמירת הנתונים בטבלת Supabase המעודכנת
-        db_response = supabase.table("candidates_updated").insert({
+        # שמירת הנתונים בטבלה החדשה והנקייה candidates_clean
+        db_response = supabase.table("candidates_clean").insert({
             "full_name": extracted_data.full_name,
             "candidate_data": extracted_data.model_dump()
         }).execute()
