@@ -118,11 +118,13 @@ def create_candidate(request: CandidatePostRequest):
         
         extracted_data = completion.choices[0].message.parsed
         
+    
         # שמירת הנתונים בטבלת Supabase
-        db_response = supabase.table("candidates").insert({
+        db_response = supabase.table("candidates updated").insert({
             "full_name": extracted_data.full_name,
             "candidate_data": extracted_data.model_dump()
         }).execute()
+
         
         return {
             "message": "Candidate parsed and saved to Supabase successfully",
