@@ -1,15 +1,14 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Any
 from openai import OpenAI
 from supabase import create_client, Client
 import os
 
-app = FastAPI(title="AI Candidate Intelligence API", version="2.1.0")
+app = FastAPI(title="AI Candidate Intelligence API", version="2.2.0")
 
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
-# הגדרת חיבור ל-Supabase
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -118,7 +117,6 @@ def create_candidate(request: CandidatePostRequest):
         
         extracted_data = completion.choices[0].message.parsed
         
-        # שמירת הנתונים בטבלה החדשה והנקייה candidates_clean
         db_response = supabase.table("candidates_clean").insert({
             "full_name": extracted_data.full_name,
             "candidate_data": extracted_data.model_dump()
@@ -131,4 +129,26 @@ def create_candidate(request: CandidatePostRequest):
         }
         
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/v1/candidates", response_model=List[Any])
+def get_all_candidates(limit: int = 10):
+    try:
+        response = supabase.table("candidates_clean").select("id, full_name, created_at").limit(limit).execute()
+        return response.data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/v1/candidates/{candidate_id}")
+def get_candidate_by_id(candidate_id: int):
+    try:
+        response = supabase.table("candidates_clean").select("*").eq("id", candidate_id).execute()
+        
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Candidate not found")
+            
+        return response.data[0]
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
         raise HTTPException(status_code=500, detail=str(e))
